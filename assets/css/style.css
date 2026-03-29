@@ -1,0 +1,45 @@
+body {
+    background-color: #f4f6f9;
+}
+
+.sidebar {
+    width: 240px;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #1f2937, #111827);
+}
+
+.sidebar a {
+    color: #d1d5db;
+    text-decoration: none;
+    display: block;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+    background-color: #374151;
+    color: #fff;
+}
+
+.content {
+    padding: 30px;
+}
+
+.card-summary {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.05);
+}
+
+.wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main {
+    flex-grow: 1;
+    padding: 20px;
+    background-color: #f8f9fa; /* warna konten */
+}
