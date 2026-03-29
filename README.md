@@ -1,16 +1,11 @@
-# Setup Project
+# Aplikasi Manajemen Peminjaman Kendaraan
 
-## 1. Import Database
-- Buka phpMyAdmin
-- Buat database: manajemen_kendaraan
-- Import file: database/manajemen_kendaraan.sql
+## Cara Menjalankan
+1. Import database dari folder /database
+2. Atur config di config/database.php
+3. Jalankan di localhost
 
-## 2. Config Database
-Edit file:
-config/database.php
-
-Sesuaikan:
-- host
-- username
-- password
-- database
+## Role User
+- Admin
+- Petugas
+- Peminjam
