@@ -14,19 +14,24 @@ $data = mysqli_query($conn, "
         p.id_peminjaman,
         k.nama_kendaraan,
         p.tanggal_pinjam,
-        p.tanggal_pengembalian,
-        d.terlambat_hari,
-        d.denda_terlambat,
-        d.denda_rusak,
-        d.total_denda,
-        d.keterangan
+        p.tanggal_jatuh_tempo,
+        pg.tanggal_kembali,
+
+        SUM(CASE WHEN dn.jenis_denda='terlambat' THEN dn.jumlah ELSE 0 END) AS denda_terlambat,
+        SUM(CASE WHEN dn.jenis_denda='kerusakan' THEN dn.jumlah ELSE 0 END) AS denda_rusak,
+        SUM(dn.jumlah) AS total_denda
+
     FROM peminjaman p
-    JOIN detail_peminjaman d ON p.id_peminjaman = d.id_peminjaman
-    JOIN kendaraan k ON d.id_kendaraan = k.id_kendaraan
-    LEFT JOIN denda d ON p.id_peminjaman = d.id_peminjaman
+    JOIN detail_peminjaman dp ON p.id_peminjaman = dp.id_peminjaman
+    JOIN kendaraan k ON dp.id_kendaraan = k.id_kendaraan
+    LEFT JOIN pengembalian pg ON p.id_peminjaman = pg.id_peminjaman
+    LEFT JOIN denda dn ON pg.id_pengembalian = dn.id_pengembalian
+
     WHERE p.id_user = '$id_user'
-      AND p.status = 'dikembalikan'
-    ORDER BY p.tanggal_pengembalian DESC
+    AND p.status = 'dikembalikan'
+
+    GROUP BY p.id_peminjaman
+    ORDER BY pg.tanggal_kembali DESC
 ");
 ?>
 
@@ -58,11 +63,28 @@ $data = mysqli_query($conn, "
     <td><?= $no++ ?></td>
     <td><?= htmlspecialchars($r['nama_kendaraan']) ?></td>
     <td><?= date('d M Y', strtotime($r['tanggal_pinjam'])) ?></td>
-    <td><?= date('d M Y', strtotime($r['tanggal_pengembalian'])) ?></td>
+    <td>
+    <?= $r['tanggal_kembali'] 
+        ? date('d M Y', strtotime($r['tanggal_kembali'])) 
+        : '-' ?>
+    </td>
+
+   <?php
+    $terlambat = 0;
+
+    if ($r['tanggal_kembali'] && $r['tanggal_jatuh_tempo']) {
+        $tgl1 = new DateTime($r['tanggal_jatuh_tempo']);
+        $tgl2 = new DateTime($r['tanggal_kembali']);
+
+        if ($tgl2 > $tgl1) {
+            $terlambat = $tgl1->diff($tgl2)->days;
+        }
+    }
+    ?>
 
     <td>
-        <?= $r['terlambat_hari'] > 0
-            ? $r['terlambat_hari'].' hari'
+        <?= $terlambat > 0
+            ? $terlambat . ' hari'
             : '<span class="text-success">Tepat waktu</span>' ?>
     </td>
 
@@ -101,7 +123,7 @@ $data = mysqli_query($conn, "
 
 <div class="modal-body">
     <p><strong>Kendaraan:</strong> <?= htmlspecialchars($r['nama_kendaraan']) ?></p>
-    <p><strong>Terlambat:</strong> <?= $r['terlambat_hari'] ?> hari</p>
+    <p><strong>Terlambat:</strong> <?= $terlambat ?> hari</p>
     <p><strong>Denda Terlambat:</strong> Rp <?= number_format($r['denda_terlambat'],0,',','.') ?></p>
     <p><strong>Denda Kerusakan:</strong> Rp <?= number_format($r['denda_rusak'],0,',','.') ?></p>
     <hr>

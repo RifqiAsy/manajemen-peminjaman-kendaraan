@@ -4,159 +4,156 @@ cekLogin();
 cekRole('petugas');
 include "../config/database.php";
 
-// ============================
-// TOTAL DATA (REAL TIME)
-// ============================
+/*
+|--------------------------------------------------------------------------
+| TOTAL DATA
+|--------------------------------------------------------------------------
+*/
 
-// Total peminjaman
-$qTotal = mysqli_query($conn, "
-    SELECT COUNT(*) AS total FROM peminjaman
-");
-$total_peminjaman = mysqli_fetch_assoc($qTotal)['total'];
+function getTotal($conn, $where = "")
+{
+    $q = mysqli_query($conn, "SELECT COUNT(*) as total FROM peminjaman $where");
+    return mysqli_fetch_assoc($q)['total'];
+}
 
-// Menunggu persetujuan
-$qMenunggu = mysqli_query($conn, "
-    SELECT COUNT(*) AS total 
-    FROM peminjaman 
-    WHERE status = 'menunggu'
-");
-$total_menunggu = mysqli_fetch_assoc($qMenunggu)['total'];
+$total_peminjaman = getTotal($conn);
+$total_menunggu   = getTotal($conn, "WHERE status='menunggu'");
+$total_disetujui  = getTotal($conn, "WHERE status='disetujui'");
+$total_kembali    = getTotal($conn, "WHERE status='menunggu_kembali'");
 
-// Sedang dipinjam
-$qDisetujui = mysqli_query($conn, "
-    SELECT COUNT(*) AS total 
-    FROM peminjaman 
-    WHERE status = 'disetujui'
-");
-$total_disetujui = mysqli_fetch_assoc($qDisetujui)['total'];
-
-// Menunggu pengembalian diverifikasi
-$qKembali = mysqli_query($conn, "
-    SELECT COUNT(*) AS total 
-    FROM peminjaman 
-    WHERE status = 'menunggu_kembali'
-");
-$total_kembali = mysqli_fetch_assoc($qKembali)['total'];
-
-// ============================
-// DATA TERBARU
-// ============================
+/*
+|--------------------------------------------------------------------------
+| DATA TERBARU
+|--------------------------------------------------------------------------
+*/
 $qLast = mysqli_query($conn, "
     SELECT 
+        p.id_peminjaman,
         p.status,
         p.tanggal_pinjam,
-        k.nama_kendaraan,
-        u.nama
+        u.nama,
+        GROUP_CONCAT(k.nama_kendaraan SEPARATOR ', ') AS kendaraan
     FROM peminjaman p
+    JOIN users u ON p.id_user = u.id_user
     JOIN detail_peminjaman d ON p.id_peminjaman = d.id_peminjaman
     JOIN kendaraan k ON d.id_kendaraan = k.id_kendaraan
-
-    JOIN users u ON p.id_user = u.id_user
+    GROUP BY p.id_peminjaman
     ORDER BY p.id_peminjaman DESC
     LIMIT 5
 ");
+
+/*
+|--------------------------------------------------------------------------
+| FUNCTION BADGE STATUS
+|--------------------------------------------------------------------------
+*/
+function badgeStatus($status)
+{
+    switch ($status) {
+        case 'menunggu':
+            return 'warning';
+        case 'disetujui':
+            return 'primary';
+        case 'menunggu_kembali':
+            return 'danger';
+        case 'dikembalikan':
+            return 'success';
+        default:
+            return 'secondary';
+    }
+}
 ?>
 
 <?php include "../partials/header.php"; ?>
+
 <body>
-<div class="container-fluid">
-<div class="row">
+<div class="d-flex">
 
     <!-- SIDEBAR -->
-    <div class="col-auto p-0">
-        <?php include "../partials/sidebar_petugas.php"; ?>
-    </div>
+    <?php include "../partials/sidebar_petugas.php"; ?>
 
     <!-- CONTENT -->
-    <div class="col p-4">
+    <div class="flex-grow-1 p-4">
 
-        <!-- TOPBAR -->
+        <!-- HEADER -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h4 class="mb-0">Dashboard Petugas</h4>
-                <small class="text-muted">Ringkasan aktivitas peminjaman kendaraan</small>
+                <h4 class="mb-1 fw-bold">Dashboard Petugas</h4>
+                <small class="text-muted">Monitoring sistem peminjaman kendaraan</small>
             </div>
-            <div>👤 <?= $_SESSION['nama']; ?></div>
+            <div class="fw-semibold">
+                👤 <?= htmlspecialchars($_SESSION['nama']); ?>
+            </div>
         </div>
 
-        <!-- SUMMARY CARDS -->
+        <!-- CARDS -->
         <div class="row g-4 mb-4">
-            <div class="col-md-3">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <small class="text-muted">Total Peminjaman</small>
-                        <h3 class="fw-bold"><?= $total_peminjaman ?></h3>
-                    </div>
-                </div>
-            </div>
 
-            <div class="col-md-3">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <small class="text-muted">Menunggu Persetujuan</small>
-                        <h3 class="fw-bold text-warning"><?= $total_menunggu ?></h3>
+            <?php
+            function card($title, $value, $color)
+            {
+                return "
+                <div class='col-md-3'>
+                    <div class='card shadow-sm border-0 border-start border-4 border-$color'>
+                        <div class='card-body'>
+                            <small class='text-muted'>$title</small>
+                            <h3 class='fw-bold text-$color'>$value</h3>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </div>";
+            }
 
-            <div class="col-md-3">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <small class="text-muted">Sedang Dipinjam</small>
-                        <h3 class="fw-bold text-primary"><?= $total_disetujui ?></h3>
-                    </div>
-                </div>
-            </div>
+            echo card("Total Peminjaman", $total_peminjaman, "dark");
+            echo card("Menunggu Persetujuan", $total_menunggu, "warning");
+            echo card("Sedang Dipinjam", $total_disetujui, "primary");
+            echo card("Menunggu Pengembalian", $total_kembali, "danger");
+            ?>
 
-            <div class="col-md-3">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <small class="text-muted">Menunggu Pengembalian</small>
-                        <h3 class="fw-bold text-danger"><?= $total_kembali ?></h3>
-                    </div>
-                </div>
-            </div>
         </div>
 
-        <!-- TABEL DATA TERBARU -->
-        <div class="card shadow-sm">
+        <!-- TABLE -->
+        <div class="card shadow-sm border-0">
             <div class="card-body">
-                <h5 class="mb-3">Peminjaman Terbaru</h5>
+
+                <h5 class="mb-3 fw-semibold">Peminjaman Terbaru</h5>
 
                 <div class="table-responsive">
-                    <table class="table table-striped align-middle">
-                        <thead>
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
                             <tr>
                                 <th>#</th>
                                 <th>Peminjam</th>
                                 <th>Kendaraan</th>
                                 <th>Status</th>
-                                <th>Tgl Pinjam</th>
+                                <th>Tanggal</th>
                             </tr>
                         </thead>
                         <tbody>
+
                         <?php if (mysqli_num_rows($qLast) > 0): ?>
                             <?php $no = 1; ?>
                             <?php while ($r = mysqli_fetch_assoc($qLast)): ?>
-                            <tr>
-                                <td><?= $no++ ?></td>
-                                <td><?= htmlspecialchars($r['nama']) ?></td>
-                                <td><?= htmlspecialchars($r['nama_kendaraan']) ?></td>
-                                <td>
-                                    <span class="badge bg-secondary">
-                                        <?= ucfirst(str_replace('_', ' ', $r['status'])) ?>
-                                    </span>
-                                </td>
-                                <td><?= date('d M Y', strtotime($r['tanggal_pinjam'])) ?></td>
-                            </tr>
+                                <tr>
+                                    <td><?= $no++ ?></td>
+                                    <td><?= htmlspecialchars($r['nama']) ?></td>
+                                    <td><?= htmlspecialchars($r['kendaraan']) ?></td>
+                                    <td>
+                                        <span class="badge bg-<?= badgeStatus($r['status']) ?>">
+                                            <?= ucfirst(str_replace('_', ' ', $r['status'])) ?>
+                                        </span>
+                                    </td>
+                                    <td><?= date('d M Y', strtotime($r['tanggal_pinjam'])) ?></td>
+                                </tr>
                             <?php endwhile; ?>
+
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="text-center text-muted">
-                                    Belum ada data peminjaman
+                                <td colspan="5" class="text-center text-muted py-3">
+                                    Belum ada data
                                 </td>
                             </tr>
                         <?php endif; ?>
+
                         </tbody>
                     </table>
                 </div>
@@ -165,7 +162,6 @@ $qLast = mysqli_query($conn, "
         </div>
 
     </div>
-</div>
 </div>
 </body>
 </html>

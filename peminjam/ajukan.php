@@ -13,7 +13,7 @@ if (!$id_user) {
 
 /*
 |--------------------------------------------------------------------------
-| CEK DENDA BELUM DIBAYAR
+| CEK DENDA
 |--------------------------------------------------------------------------
 */
 $cekDenda = mysqli_query($conn, "
@@ -62,22 +62,9 @@ if (isset($_POST['ajukan']) && !$punyaDenda) {
 
     try {
 
-        // Insert peminjaman
-        mysqli_query($conn, "
-            INSERT INTO peminjaman
-            (id_user, tanggal_pinjam, tanggal_rencana_kembali, status, created_at)
-            VALUES (
-                $id_user,
-                '$tanggal_pinjam',
-                '$tanggal_kembali',
-                'menunggu',
-                NOW()
-            )
-        ");
-
         $result = mysqli_query($conn, "
             INSERT INTO peminjaman
-            (id_user, tanggal_pinjam, tanggal_rencana_kembali, status, created_at)
+            (id_user, tanggal_pinjam, tanggal_jatuh_tempo, status, created_at)
             VALUES (
                 $id_user,
                 '$tanggal_pinjam',
@@ -93,18 +80,6 @@ if (isset($_POST['ajukan']) && !$punyaDenda) {
 
         $id_peminjaman = mysqli_insert_id($conn);
 
-        if (!$id_peminjaman) {
-            throw new Exception("ID peminjaman gagal dibuat.");
-        }
-
-        $dipilih = $_POST['pilih'] ?? [];
-
-        if (empty($dipilih)) {
-            $_SESSION['error'] = "Pilih minimal 1 kendaraan.";
-            header("Location: ajukan.php");
-            exit;
-        }
-
         foreach ($dipilih as $id_kendaraan) {
 
             $id_kendaraan = (int)$id_kendaraan;
@@ -113,8 +88,6 @@ if (isset($_POST['ajukan']) && !$punyaDenda) {
             if ($qty <= 0) {
                 throw new Exception("Jumlah tidak valid.");
             }
-
-            $adaItem = true;
 
             $cek = mysqli_query($conn, "
                 SELECT stok
@@ -136,15 +109,10 @@ if (isset($_POST['ajukan']) && !$punyaDenda) {
             ");
         }
 
-        if (!$adaItem) {
-            throw new Exception("Pilih minimal 1 kendaraan.");
-        }
-
         mysqli_commit($conn);
         $_SESSION['success'] = "Pengajuan berhasil.";
 
     } catch (Exception $e) {
-
         mysqli_rollback($conn);
         $_SESSION['error'] = $e->getMessage();
     }
@@ -157,112 +125,103 @@ if (isset($_POST['ajukan']) && !$punyaDenda) {
 <?php include "../partials/header.php"; ?>
 
 <body>
-<div class="container mt-5">
-<div class="row justify-content-center">
-<div class="col-md-7">
 
-<a href="dashboard.php" class="btn btn-secondary mb-3">
-← Kembali ke Dashboard
-</a>
+<div class="d-flex">
 
-<h3 class="mb-4">Ajukan Peminjaman Kendaraan</h3>
+    <!-- ✅ SIDEBAR -->
+    <?php include "../partials/sidebar_peminjam.php"; ?>
 
-<?php if ($punyaDenda): ?>
-<div class="alert alert-danger">
-    Anda masih memiliki denda yang belum dibayar.
-    Silakan lunasi terlebih dahulu sebelum mengajukan peminjaman.
-</div>
-<?php endif; ?>
+    <!-- ✅ CONTENT -->
+    <div class="container-fluid p-4">
 
-<?php if (isset($_SESSION['error'])): ?>
-<div class="alert alert-danger">
-    <?= $_SESSION['error']; unset($_SESSION['error']); ?>
-</div>
-<?php endif; ?>
+        <h3 class="mb-4">Ajukan Peminjaman Kendaraan</h3>
 
-<?php if (isset($_SESSION['success'])): ?>
-<div class="alert alert-success">
-    <?= $_SESSION['success']; unset($_SESSION['success']); ?>
-</div>
-<?php endif; ?>
+        <?php if ($punyaDenda): ?>
+        <div class="alert alert-danger">
+            Anda masih memiliki denda yang belum dibayar.
+        </div>
+        <?php endif; ?>
 
-<?php if (!$punyaDenda): ?>
+        <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-danger">
+            <?= $_SESSION['error']; unset($_SESSION['error']); ?>
+        </div>
+        <?php endif; ?>
 
-<form method="post">
+        <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success">
+            <?= $_SESSION['success']; unset($_SESSION['success']); ?>
+        </div>
+        <?php endif; ?>
 
-<div class="row mb-3">
-    <div class="col-md-6">
-        <label class="form-label">Tanggal Pinjam</label>
-        <input type="date"
-               name="tanggal_pinjam"
-               class="form-control"
-               min="<?= date('Y-m-d') ?>"
-               required>
+        <?php if (!$punyaDenda): ?>
+
+        <form method="post">
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Tanggal Pinjam</label>
+                <input type="date" name="tanggal_pinjam" class="form-control" min="<?= date('Y-m-d') ?>" required>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Tanggal Kembali</label>
+                <input type="date" name="tanggal_kembali" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="card">
+        <div class="card-body">
+
+        <?php
+        $q = mysqli_query($conn, "SELECT * FROM kendaraan WHERE stok > 0 ORDER BY nama_kendaraan ASC");
+        ?>
+
+        <table class="table table-bordered">
+        <thead class="table-light">
+        <tr>
+            <th>Pilih</th>
+            <th>Nama Kendaraan</th>
+            <th>Stok</th>
+            <th>Jumlah</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <?php while ($k = mysqli_fetch_assoc($q)): ?>
+        <tr>
+            <td>
+                <input type="checkbox" name="pilih[]" value="<?= $k['id_kendaraan'] ?>">
+            </td>
+            <td><?= htmlspecialchars($k['nama_kendaraan']) ?></td>
+            <td><?= $k['stok'] ?></td>
+            <td>
+                <input type="number"
+                       name="jumlah[<?= $k['id_kendaraan'] ?>]"
+                       min="0"
+                       max="<?= $k['stok'] ?>"
+                       class="form-control"
+                       value="0">
+            </td>
+        </tr>
+        <?php endwhile; ?>
+
+        </tbody>
+        </table>
+
+        </div>
+        </div>
+
+        <button type="submit" name="ajukan" class="btn btn-primary mt-3">
+            Ajukan Peminjaman
+        </button>
+
+        </form>
+
+        <?php endif; ?>
+
     </div>
-
-    <div class="col-md-6">
-        <label class="form-label">Tanggal Rencana Kembali</label>
-        <input type="date"
-               name="tanggal_kembali"
-               class="form-control"
-               required>
-    </div>
 </div>
 
-<div class="card mb-3">
-<div class="card-body">
-
-<?php
-$q = mysqli_query($conn, "SELECT * FROM kendaraan WHERE stok > 0 ORDER BY nama_kendaraan ASC");
-?>
-
-<table class="table table-bordered align-middle">
-<thead class="table-light">
-<tr>
-    <th>Pilih</th>
-    <th>Nama Kendaraan</th>
-    <th>Stok</th>
-    <th>Jumlah</th>
-</tr>
-</thead>
-<tbody>
-
-<?php while ($k = mysqli_fetch_assoc($q)): ?>
-<tr>
-    <td>
-        <input type="checkbox"
-               name="pilih[]"
-               value="<?= $k['id_kendaraan'] ?>">
-    </td>
-    <td><?= htmlspecialchars($k['nama_kendaraan']) ?></td>
-    <td><?= $k['stok'] ?></td>
-    <td>
-        <input type="number"
-               name="jumlah[<?= $k['id_kendaraan'] ?>]"
-               min="0"
-               max="<?= $k['stok'] ?>"
-               class="form-control"
-               value="0">
-    </td>
-</tr>
-<?php endwhile; ?>
-
-</tbody>
-</table>
-
-</div>
-</div>
-
-<button type="submit" name="ajukan" class="btn btn-primary w-100">
-Ajukan Peminjaman
-</button>
-
-</form>
-
-<?php endif; ?>
-
-</div>
-</div>
-</div>
 </body>
 </html>

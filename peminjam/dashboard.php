@@ -4,7 +4,7 @@ cekLogin();
 cekRole('peminjam');
 include "../config/database.php";
 
-$id_user = $_SESSION['id_user'];
+$id_user = (int) $_SESSION['id_user'];
 
 // ============================
 // TOTAL PEMINJAMAN
@@ -12,9 +12,9 @@ $id_user = $_SESSION['id_user'];
 $qTotal = mysqli_query($conn, "
     SELECT COUNT(*) AS total 
     FROM peminjaman 
-    WHERE id_user = '$id_user'
+    WHERE id_user = $id_user
 ");
-$total_peminjaman = mysqli_fetch_assoc($qTotal)['total'];
+$total_peminjaman = mysqli_fetch_assoc($qTotal)['total'] ?? 0;
 
 // ============================
 // DATA TERAKHIR
@@ -22,7 +22,7 @@ $total_peminjaman = mysqli_fetch_assoc($qTotal)['total'];
 $qLastPeminjaman = mysqli_query($conn, "
     SELECT id_peminjaman, status
     FROM peminjaman
-    WHERE id_user = '$id_user'
+    WHERE id_user = $id_user
     ORDER BY id_peminjaman DESC
     LIMIT 1
 ");
@@ -30,13 +30,12 @@ $qLastPeminjaman = mysqli_query($conn, "
 $last_status = '-';
 $last_vehicle = '-';
 
-if (mysqli_num_rows($qLastPeminjaman) > 0) {
+if ($qLastPeminjaman && mysqli_num_rows($qLastPeminjaman) > 0) {
 
     $last = mysqli_fetch_assoc($qLastPeminjaman);
-    $last_status = $last['status'];
-    $id_last = $last['id_peminjaman'];
+    $last_status = $last['status'] ?? '-';
+    $id_last = (int)$last['id_peminjaman'];
 
-    // Ambil kendaraan dari peminjaman terakhir
     $qLastKendaraan = mysqli_query($conn, "
         SELECT k.nama_kendaraan
         FROM detail_peminjaman d
@@ -50,25 +49,24 @@ if (mysqli_num_rows($qLastPeminjaman) > 0) {
         $kendaraan[] = $row['nama_kendaraan'];
     }
 
-    $last_vehicle = implode(', ', $kendaraan);
+    $last_vehicle = !empty($kendaraan) ? implode(', ', $kendaraan) : '-';
 }
 
-
 // ============================
-// TOTAL DENDA (BENAR)
+// TOTAL DENDA
 // ============================
 $qTotalDenda = mysqli_query($conn, "
     SELECT COALESCE(SUM(d.jumlah),0) AS total_denda
     FROM denda d
     JOIN pengembalian pg ON d.id_pengembalian = pg.id_pengembalian
     JOIN peminjaman p ON pg.id_peminjaman = p.id_peminjaman
-    WHERE p.id_user = '$id_user'
+    WHERE p.id_user = $id_user
     AND d.status = 'belum_dibayar'
 ");
-$total_denda = mysqli_fetch_assoc($qTotalDenda)['total_denda'];
+$total_denda = mysqli_fetch_assoc($qTotalDenda)['total_denda'] ?? 0;
 
 // ============================
-// DETAIL DENDA (BENAR)
+// DETAIL DENDA
 // ============================
 $qDenda = mysqli_query($conn, "
     SELECT 
@@ -77,18 +75,17 @@ $qDenda = mysqli_query($conn, "
         dn.jumlah,
         dn.keterangan,
         dn.status,
-        dn.created_at,
-        GROUP_CONCAT(k.nama_kendaraan SEPARATOR ', ') AS daftar_kendaraan
+        pg.created_at,
+        GROUP_CONCAT(DISTINCT k.nama_kendaraan SEPARATOR ', ') AS daftar_kendaraan
     FROM denda dn
     JOIN pengembalian pg ON dn.id_pengembalian = pg.id_pengembalian
     JOIN peminjaman p ON pg.id_peminjaman = p.id_peminjaman
     JOIN detail_peminjaman dp ON p.id_peminjaman = dp.id_peminjaman
     JOIN kendaraan k ON dp.id_kendaraan = k.id_kendaraan
-    WHERE p.id_user = '$id_user'
+    WHERE p.id_user = $id_user
     GROUP BY dn.id_denda
-    ORDER BY dn.created_at DESC
+    ORDER BY pg.created_at DESC
 ");
-
 
 // ============================
 // RIWAYAT PEMINJAMAN
@@ -96,14 +93,15 @@ $qDenda = mysqli_query($conn, "
 $list = mysqli_query($conn, "
     SELECT 
         p.id_peminjaman,
-        p.status,
-        p.tanggal_pinjam,
-        p.tanggal_pengembalian,
-        GROUP_CONCAT(k.nama_kendaraan SEPARATOR ', ') AS daftar_kendaraan
+        MAX(p.status) AS status,
+        MAX(p.tanggal_pinjam) AS tanggal_pinjam,
+        MAX(pg.tanggal_kembali) AS tanggal_kembali,
+        GROUP_CONCAT(DISTINCT k.nama_kendaraan SEPARATOR ', ') AS daftar_kendaraan
     FROM peminjaman p
     JOIN detail_peminjaman d ON p.id_peminjaman = d.id_peminjaman
     JOIN kendaraan k ON d.id_kendaraan = k.id_kendaraan
-    WHERE p.id_user = '$id_user'
+    LEFT JOIN pengembalian pg ON p.id_peminjaman = pg.id_peminjaman
+    WHERE p.id_user = $id_user
     GROUP BY p.id_peminjaman
     ORDER BY p.id_peminjaman DESC
 ");
@@ -133,6 +131,7 @@ $list = mysqli_query($conn, "
 
 <!-- SUMMARY -->
 <div class="row g-4 mb-4">
+
     <div class="col-md-3">
         <div class="card shadow-sm">
             <div class="card-body">
@@ -170,6 +169,7 @@ $list = mysqli_query($conn, "
             </div>
         </div>
     </div>
+
 </div>
 
 <!-- DETAIL DENDA -->
@@ -179,7 +179,7 @@ $list = mysqli_query($conn, "
     </div>
     <div class="card-body">
 
-    <?php if (mysqli_num_rows($qDenda) > 0): ?>
+    <?php if ($qDenda && mysqli_num_rows($qDenda) > 0): ?>
         <div class="table-responsive">
             <table class="table table-bordered align-middle">
                 <thead class="table-light">
@@ -194,13 +194,13 @@ $list = mysqli_query($conn, "
                 <tbody>
                 <?php while ($d = mysqli_fetch_assoc($qDenda)): ?>
                     <tr>
-                        <td><?= htmlspecialchars($d['daftar_kendaraan']) ?></td>
+                        <td><?= htmlspecialchars($d['daftar_kendaraan'] ?? '-') ?></td>
                         <td><?= ucfirst($d['jenis_denda']) ?></td>
                         <td class="text-danger fw-bold">
                             Rp <?= number_format($d['jumlah']) ?>
                         </td>
                         <td>
-                            <span class="badge <?= $d['status']=='dibayar' ? 'bg-success' : 'bg-warning' ?>">
+                            <span class="badge <?= $d['status']=='lunas' ? 'bg-success' : 'bg-warning' ?>">
                                 <?= str_replace('_',' ', $d['status']) ?>
                             </span>
                         </td>
@@ -212,7 +212,7 @@ $list = mysqli_query($conn, "
         </div>
     <?php else: ?>
         <div class="alert alert-success mb-0">
-            Tidak ada denda. Anda adalah orang yg taat aturan.
+            Tidak ada denda
         </div>
     <?php endif; ?>
 
@@ -237,15 +237,15 @@ $list = mysqli_query($conn, "
                 <tbody>
                 <?php
                 $no = 1;
-                if (mysqli_num_rows($list) > 0):
+                if ($list && mysqli_num_rows($list) > 0):
                     while ($row = mysqli_fetch_assoc($list)):
                 ?>
                     <tr>
                         <td><?= $no++ ?></td>
-                        <td><?= htmlspecialchars($row['daftar_kendaraan']) ?></td>
+                        <td><?= htmlspecialchars($row['daftar_kendaraan'] ?? '-') ?></td>
                         <td><?= ucfirst($row['status']) ?></td>
                         <td><?= $row['tanggal_pinjam'] ?></td>
-                        <td><?= $row['tanggal_pengembalian'] ?: '-' ?></td>
+                        <td><?= $row['tanggal_kembali'] ?: '-' ?></td>
                     </tr>
                 <?php endwhile; else: ?>
                     <tr>
@@ -265,4 +265,3 @@ $list = mysqli_query($conn, "
 </div>
 </body>
 </html>
-

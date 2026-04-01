@@ -2,8 +2,12 @@
 require '../middleware/auth.php';
 cekLogin();
 cekRole('petugas');
+
 require '../config/database.php';
 require '../helpers/logger.php';
+
+// 🔥 Debug mode
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $id_petugas = $_SESSION['id_user'];
 
@@ -20,7 +24,7 @@ if (isset($_POST['bayar'])) {
 
     try {
 
-        // Lock denda agar tidak bisa dibayar dua kali
+        // Lock data denda
         $getPengembalian = mysqli_query($conn, "
             SELECT id_pengembalian 
             FROM denda 
@@ -36,20 +40,18 @@ if (isset($_POST['bayar'])) {
         $row = mysqli_fetch_assoc($getPengembalian);
         $id_pengembalian = $row['id_pengembalian'];
 
-        // Update status denda
-        mysqli_query($conn, "
+        // Update denda
+        if (!mysqli_query($conn, "
             UPDATE denda
             SET status = 'dibayar'
             WHERE id_denda = $id_denda
-        ");
+        ")) {
+            throw new Exception(mysqli_error($conn));
+        }
 
-        logAktivitas(
-            $conn,
-            $id_petugas,
-            "Membayar denda ID $id_denda"
-        );
+        logAktivitas($conn, $id_petugas, "Membayar denda ID $id_denda");
 
-        // Cek apakah masih ada denda belum dibayar
+        // Cek sisa denda
         $cek = mysqli_query($conn, "
             SELECT COUNT(*) as total
             FROM denda
@@ -57,16 +59,22 @@ if (isset($_POST['bayar'])) {
             AND status = 'belum_dibayar'
         ");
 
+        if (!$cek) {
+            throw new Exception(mysqli_error($conn));
+        }
+
         $sisa = mysqli_fetch_assoc($cek)['total'];
 
-        // Jika semua lunas → update status_pembayaran
+        // Jika lunas
         if ($sisa == 0) {
 
-            mysqli_query($conn, "
+            if (!mysqli_query($conn, "
                 UPDATE pengembalian
                 SET status_pembayaran = 'lunas'
                 WHERE id_pengembalian = $id_pengembalian
-            ");
+            ")) {
+                throw new Exception(mysqli_error($conn));
+            }
 
             logAktivitas(
                 $conn,
@@ -76,13 +84,12 @@ if (isset($_POST['bayar'])) {
         }
 
         mysqli_commit($conn);
-
         $_SESSION['success'] = "Pembayaran berhasil diproses.";
 
     } catch (Exception $e) {
 
         mysqli_rollback($conn);
-        $_SESSION['error'] = "Terjadi kesalahan sistem.";
+        $_SESSION['error'] = $e->getMessage(); // 🔥 tampilkan error asli
     }
 
     header("Location: pembayaran_denda.php");
@@ -92,7 +99,7 @@ if (isset($_POST['bayar'])) {
 
 /*
 |--------------------------------------------------------------------------
-| AMBIL DATA DENDA BELUM DIBAYAR
+| AMBIL DATA DENDA (FIX JOIN)
 |--------------------------------------------------------------------------
 */
 $data = mysqli_query($conn, "
@@ -100,14 +107,14 @@ $data = mysqli_query($conn, "
         dn.id_denda,
         dn.id_pengembalian,
         u.nama,
-        k.nama_kendaraan,
+        COALESCE(k.nama_kendaraan, '-') AS nama_kendaraan,
         dn.jenis_denda,
         dn.jumlah,
         dn.keterangan,
         dn.created_at
     FROM denda dn
-    JOIN detail_peminjaman dp ON dn.id_detail = dp.id_detail
-    JOIN kendaraan k ON dp.id_kendaraan = k.id_kendaraan
+    LEFT JOIN detail_peminjaman dp ON dn.id_detail = dp.id_detail
+    LEFT JOIN kendaraan k ON dp.id_kendaraan = k.id_kendaraan
     JOIN pengembalian pg ON dn.id_pengembalian = pg.id_pengembalian
     JOIN peminjaman p ON pg.id_peminjaman = p.id_peminjaman
     JOIN users u ON p.id_user = u.id_user
@@ -115,77 +122,89 @@ $data = mysqli_query($conn, "
     ORDER BY dn.created_at DESC
 ");
 
+if (!$data) {
+    die(mysqli_error($conn));
+}
 ?>
 
 <?php include "../partials/header.php"; ?>
+
 <body>
-<div class="container mt-5">
+    <div class="d-flex">
 
-<a href="dashboard.php" class="btn btn-secondary mb-3">← Dashboard</a>
+        <?php include '../partials/sidebar_petugas.php'; ?>
 
-<h3 class="mb-4">Manajemen Pembayaran Denda</h3>
+        <div class="content flex-grow-1 p-4">
 
-<?php if (isset($_SESSION['success'])): ?>
-<div class="alert alert-success">
-    <?= $_SESSION['success']; unset($_SESSION['success']); ?>
-</div>
-<?php endif; ?>
+            <h3 class="mb-4">Manajemen Pembayaran Denda</h3>
 
-<?php if (isset($_SESSION['error'])): ?>
-<div class="alert alert-danger">
-    <?= $_SESSION['error']; unset($_SESSION['error']); ?>
-</div>
-<?php endif; ?>
+            <?php if (isset($_SESSION['success'])): ?>
+                <div class="alert alert-success">
+                    <?= $_SESSION['success']; unset($_SESSION['success']); ?>
+                </div>
+            <?php endif; ?>
 
-<?php if (mysqli_num_rows($data) > 0): ?>
-<div class="table-responsive">
-<table class="table table-hover table-bordered align-middle">
-<thead class="table-dark">
-<tr>
-    <th>Peminjam</th>
-    <th>Kendaraan</th>
-    <th>Jenis</th>
-    <th>Jumlah</th>
-    <th>Keterangan</th>
-    <th>Tanggal</th>
-    <th>Aksi</th>
-</tr>
-</thead>
-<tbody>
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger">
+                    <?= $_SESSION['error']; unset($_SESSION['error']); ?>
+                </div>
+            <?php endif; ?>
 
-<?php while($r = mysqli_fetch_assoc($data)): ?>
-<tr>
-<td><?= htmlspecialchars($r['nama']) ?></td>
-<td><?= htmlspecialchars($r['nama_kendaraan']) ?></td>
-<td><?= ucfirst($r['jenis_denda']) ?></td>
-<td class="text-danger fw-bold">
-    Rp <?= number_format($r['jumlah']) ?>
-</td>
-<td><?= htmlspecialchars($r['keterangan'] ?: '-') ?></td>
-<td><?= date('d-m-Y', strtotime($r['created_at'])) ?></td>
-<td>
-<form method="post">
-    <input type="hidden" name="id_denda" value="<?= $r['id_denda'] ?>">
-    <button type="submit"
-            name="bayar"
-            onclick="return confirm('Konfirmasi pembayaran denda ini?')"
-            class="btn btn-success btn-sm">
-        Bayar
-    </button>
-</form>
-</td>
-</tr>
-<?php endwhile; ?>
+            <?php if (mysqli_num_rows($data) > 0): ?>
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Peminjam</th>
+                                <th>Kendaraan</th>
+                                <th>Jenis</th>
+                                <th>Jumlah</th>
+                                <th>Keterangan</th>
+                                <th>Tanggal</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
 
-</tbody>
-</table>
-</div>
-<?php else: ?>
-<div class="alert alert-success">
-    Semua denda sudah lunas.
-</div>
-<?php endif; ?>
+                            <?php while ($r = mysqli_fetch_assoc($data)): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['nama']) ?></td>
+                                    <td><?= htmlspecialchars($r['nama_kendaraan']) ?></td>
+                                    <td><?= ucfirst($r['jenis_denda']) ?></td>
+                                    <td class="text-danger fw-bold">
+                                        Rp <?= number_format($r['jumlah'], 0, ',', '.') ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($r['keterangan'] ?: '-') ?></td>
+                                    <td>
+                                        <?= !empty($r['created_at']) 
+                                            ? date('d-m-Y', strtotime($r['created_at'])) 
+                                            : '-' ?>
+                                    </td>
+                                    <td>
+                                        <form method="post">
+                                            <input type="hidden" name="id_denda" value="<?= $r['id_denda'] ?>">
+                                            <button type="submit"
+                                                    name="bayar"
+                                                    onclick="return confirm('Konfirmasi pembayaran denda ini?')"
+                                                    class="btn btn-success btn-sm">
+                                                Bayar
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
 
-</div>
+                        </tbody>
+                    </table>
+                </div>
+
+            <?php else: ?>
+                <div class="alert alert-success">
+                    Semua denda sudah lunas.
+                </div>
+            <?php endif; ?>
+
+        </div>
+    </div>
 </body>
 </html>

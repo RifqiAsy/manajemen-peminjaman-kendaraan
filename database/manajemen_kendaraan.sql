@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Waktu pembuatan: 29 Mar 2026 pada 14.42
+-- Waktu pembuatan: 31 Mar 2026 pada 07.38
 -- Versi server: 8.4.3
 -- Versi PHP: 8.2.28
 
@@ -51,6 +51,15 @@ CREATE TABLE `detail_peminjaman` (
   `jumlah` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
+--
+-- Dumping data untuk tabel `detail_peminjaman`
+--
+
+INSERT INTO `detail_peminjaman` (`id_detail`, `id_peminjaman`, `id_kendaraan`, `jumlah`) VALUES
+(25, 58, 11, 5),
+(26, 58, 10, 10),
+(27, 59, 11, 10);
+
 -- --------------------------------------------------------
 
 --
@@ -90,7 +99,7 @@ CREATE TABLE `kendaraan` (
 
 INSERT INTO `kendaraan` (`id_kendaraan`, `id_kategori`, `nama_kendaraan`, `status`, `stok`) VALUES
 (10, 1, 'Toyota Land Cruiser', 'tersedia', 20),
-(11, 2, 'Honda Vario', 'tersedia', 9);
+(11, 2, 'Honda Vario', 'tersedia', 10);
 
 -- --------------------------------------------------------
 
@@ -115,7 +124,39 @@ CREATE TABLE `log_aktivitas` (
 INSERT INTO `log_aktivitas` (`id_log`, `id_user`, `role`, `ip_address`, `aktivitas`, `referensi_id`, `created_at`) VALUES
 (217, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-22 10:22:53'),
 (218, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-22 10:23:05'),
-(219, 2, NULL, NULL, 'Login ke sistem', NULL, '2026-03-22 10:23:21');
+(219, 2, NULL, NULL, 'Login ke sistem', NULL, '2026-03-22 10:23:21'),
+(220, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 11:39:25'),
+(221, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 11:40:35'),
+(222, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 11:44:46'),
+(223, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 11:46:58'),
+(224, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 11:52:08'),
+(225, 2, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:04:37'),
+(226, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:07:14'),
+(227, 2, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:24:09'),
+(228, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:25:17'),
+(229, 2, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:29:47'),
+(230, 2, 'admin', '::1', '2', 0, '2026-03-30 12:29:56'),
+(231, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:30:05'),
+(232, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:30:31'),
+(233, 3, 'petugas', '::1', '3', 0, '2026-03-30 12:30:37'),
+(234, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:30:48'),
+(235, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:31:30'),
+(236, 3, 'petugas', '::1', '3', 0, '2026-03-30 12:31:36'),
+(237, 3, 'petugas', '::1', '3', 0, '2026-03-30 12:31:41'),
+(238, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-30 12:32:02'),
+(239, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:00:02'),
+(240, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:01:36'),
+(241, 3, 'petugas', '::1', '3', 0, '2026-03-31 07:01:43'),
+(242, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:01:47'),
+(243, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:02:01'),
+(244, 3, 'petugas', '::1', '3', 0, '2026-03-31 07:02:19'),
+(245, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:02:25'),
+(246, 3, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:02:42'),
+(247, 3, 'petugas', '::1', '3', 0, '2026-03-31 07:02:53'),
+(248, 3, 'petugas', '::1', '3', 0, '2026-03-31 07:02:53'),
+(249, 3, 'petugas', '::1', '3', 0, '2026-03-31 07:03:00'),
+(250, 4, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:03:10'),
+(251, 2, NULL, NULL, 'Login ke sistem', NULL, '2026-03-31 07:03:21');
 
 -- --------------------------------------------------------
 
@@ -146,8 +187,17 @@ CREATE TABLE `peminjaman` (
   `approved_by` int DEFAULT NULL,
   `tanggal_pengembalian` date DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
-  `id_kendaraan` int DEFAULT NULL
+  `id_kendaraan` int DEFAULT NULL,
+  `tanggal_kembali` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+--
+-- Dumping data untuk tabel `peminjaman`
+--
+
+INSERT INTO `peminjaman` (`id_peminjaman`, `id_user`, `tanggal_pinjam`, `tanggal_rencana_kembali`, `status`, `approved_by`, `tanggal_pengembalian`, `created_at`, `id_kendaraan`, `tanggal_kembali`) VALUES
+(58, 4, '2026-03-30', '2026-03-31', 'dikembalikan', 3, '2026-03-30', '2026-03-30 19:30:22', NULL, NULL),
+(59, 4, '2026-03-31', '2026-04-01', 'dikembalikan', 3, '2026-03-31', '2026-03-31 14:01:29', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -157,17 +207,16 @@ CREATE TABLE `peminjaman` (
 
 CREATE TABLE `pengembalian` (
   `id_pengembalian` int NOT NULL,
-  `nomor_invoice` varchar(30) DEFAULT NULL,
   `id_peminjaman` int NOT NULL,
-  `tanggal_kembali` date NOT NULL,
-  `kondisi_kendaraan` enum('baik','rusak') DEFAULT 'baik',
+  `nomor_invoice` varchar(50) DEFAULT NULL,
+  `tanggal_kembali` date DEFAULT NULL,
+  `kondisi_kendaraan` enum('baik','rusak') DEFAULT NULL,
   `catatan` text,
-  `status` enum('menunggu','disetujui','ditolak') DEFAULT 'menunggu',
+  `total_denda` int DEFAULT '0',
+  `status` enum('disetujui') DEFAULT 'disetujui',
+  `status_pembayaran` enum('lunas','belum_dibayar') DEFAULT 'lunas',
   `diperiksa_oleh` int DEFAULT NULL,
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `status_pembayaran` enum('belum_dibayar','sebagian','lunas') CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'belum_dibayar',
-  `total_denda` decimal(12,2) DEFAULT '0.00',
-  `total_dibayar` decimal(12,2) DEFAULT '0.00'
+  `created_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- --------------------------------------------------------
@@ -202,8 +251,8 @@ INSERT INTO `users` (`id_user`, `nama`, `username`, `password`, `role`) VALUES
 --
 ALTER TABLE `denda`
   ADD PRIMARY KEY (`id_denda`),
-  ADD KEY `id_pengembalian` (`id_pengembalian`),
-  ADD KEY `fk_denda_detail` (`id_detail`);
+  ADD KEY `fk_denda_detail` (`id_detail`),
+  ADD KEY `denda_ibfk_1` (`id_pengembalian`);
 
 --
 -- Indeks untuk tabel `detail_peminjaman`
@@ -237,8 +286,8 @@ ALTER TABLE `log_aktivitas`
 --
 ALTER TABLE `pembayaran_denda`
   ADD PRIMARY KEY (`id_pembayaran`),
-  ADD KEY `fk_bayar_pengembalian` (`id_pengembalian`),
-  ADD KEY `fk_bayar_petugas` (`dibayar_oleh`);
+  ADD KEY `fk_bayar_petugas` (`dibayar_oleh`),
+  ADD KEY `fk_bayar_pengembalian` (`id_pengembalian`);
 
 --
 -- Indeks untuk tabel `peminjaman`
@@ -253,10 +302,7 @@ ALTER TABLE `peminjaman`
 -- Indeks untuk tabel `pengembalian`
 --
 ALTER TABLE `pengembalian`
-  ADD PRIMARY KEY (`id_pengembalian`),
-  ADD UNIQUE KEY `unique_pengembalian` (`id_peminjaman`),
-  ADD UNIQUE KEY `nomor_invoice` (`nomor_invoice`),
-  ADD KEY `diperiksa_oleh` (`diperiksa_oleh`);
+  ADD PRIMARY KEY (`id_pengembalian`);
 
 --
 -- Indeks untuk tabel `users`
@@ -273,13 +319,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT untuk tabel `denda`
 --
 ALTER TABLE `denda`
-  MODIFY `id_denda` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id_denda` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT untuk tabel `detail_peminjaman`
 --
 ALTER TABLE `detail_peminjaman`
-  MODIFY `id_detail` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `id_detail` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT untuk tabel `kategori_kendaraan`
@@ -297,7 +343,7 @@ ALTER TABLE `kendaraan`
 -- AUTO_INCREMENT untuk tabel `log_aktivitas`
 --
 ALTER TABLE `log_aktivitas`
-  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=220;
+  MODIFY `id_log` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=252;
 
 --
 -- AUTO_INCREMENT untuk tabel `pembayaran_denda`
@@ -309,13 +355,13 @@ ALTER TABLE `pembayaran_denda`
 -- AUTO_INCREMENT untuk tabel `peminjaman`
 --
 ALTER TABLE `peminjaman`
-  MODIFY `id_peminjaman` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
+  MODIFY `id_peminjaman` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT untuk tabel `pengembalian`
 --
 ALTER TABLE `pengembalian`
-  MODIFY `id_pengembalian` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id_pengembalian` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT untuk tabel `users`
@@ -331,7 +377,7 @@ ALTER TABLE `users`
 -- Ketidakleluasaan untuk tabel `denda`
 --
 ALTER TABLE `denda`
-  ADD CONSTRAINT `denda_ibfk_1` FOREIGN KEY (`id_pengembalian`) REFERENCES `pengembalian` (`id_pengembalian`),
+  ADD CONSTRAINT `denda_ibfk_1` FOREIGN KEY (`id_pengembalian`) REFERENCES `pengembalian` (`id_pengembalian`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_denda_detail` FOREIGN KEY (`id_detail`) REFERENCES `detail_peminjaman` (`id_detail`) ON DELETE CASCADE;
 
 --
@@ -361,13 +407,6 @@ ALTER TABLE `peminjaman`
   ADD CONSTRAINT `fk_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id_user`),
   ADD CONSTRAINT `fk_kendaraan` FOREIGN KEY (`id_kendaraan`) REFERENCES `kendaraan` (`id_kendaraan`),
   ADD CONSTRAINT `peminjaman_ibfk_1` FOREIGN KEY (`id_user`) REFERENCES `users` (`id_user`);
-
---
--- Ketidakleluasaan untuk tabel `pengembalian`
---
-ALTER TABLE `pengembalian`
-  ADD CONSTRAINT `pengembalian_ibfk_1` FOREIGN KEY (`id_peminjaman`) REFERENCES `peminjaman` (`id_peminjaman`),
-  ADD CONSTRAINT `pengembalian_ibfk_2` FOREIGN KEY (`diperiksa_oleh`) REFERENCES `users` (`id_user`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -20,7 +20,7 @@ include '../config/database.php';
             <select name="id_user" class="form-control" required>
                 <option value="">-- Pilih User --</option>
                 <?php
-                $user = mysqli_query($conn, "SELECT * FROM users");
+                $user = mysqli_query($conn, "SELECT * FROM users WHERE role = 'peminjam'");
                 while ($u = mysqli_fetch_assoc($user)) {
                     echo "<option value='{$u['id_user']}'>{$u['nama']}</option>";
                 }
@@ -33,7 +33,7 @@ include '../config/database.php';
             <select name="id_kendaraan" class="form-control" required>
                 <option value="">-- Pilih Kendaraan --</option>
                 <?php
-                $kendaraan = mysqli_query($conn, "SELECT * FROM kendaraan");
+                $kendaraan = mysqli_query($conn, "SELECT * FROM kendaraan WHERE status = 'tersedia'");
                 while ($k = mysqli_fetch_assoc($kendaraan)) {
                     echo "<option value='{$k['id_kendaraan']}'>{$k['nama_kendaraan']}</option>";
                 }
