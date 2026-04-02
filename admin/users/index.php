@@ -1,10 +1,9 @@
 <?php
-include "../middleware/auth.php";
+include "../../middleware/auth.php";
 cekLogin();
 cekRole('admin');
-include "../config/database.php";
-require '../helpers/logger.php';
-
+include "../../config/database.php";
+require "../../helpers/logger.php";
 /* ===============================
    TAMBAH USER
 ================================ */
@@ -27,7 +26,7 @@ if (isset($_POST['tambah'])) {
     );
 
     $_SESSION['success'] = "User berhasil ditambahkan";
-    header("Location: users.php");
+    header("Location: ../users/index.php");
     exit;
 }
 
@@ -63,7 +62,7 @@ if (isset($_POST['update'])) {
     );
 
     $_SESSION['success'] = "User berhasil diperbarui";
-    header("Location: users.php");
+    header("Location: ../users/index.php");
     exit;
 }
 
@@ -81,7 +80,7 @@ if (isset($_GET['hapus'])) {
     );
 
     $_SESSION['success'] = "User berhasil dihapus";
-    header("Location: users.php");
+    header("Location: ../users/index.php");
     exit;
 }
 
@@ -91,13 +90,13 @@ if (isset($_GET['hapus'])) {
 $users = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
 ?>
 
-<?php include "../partials/header.php"; ?>
+<?php include "../../partials/header.php"; ?>
 <div class="container-fluid">
 <div class="row">
 
     <!-- SIDEBAR -->
     <div class="col-auto p-0">
-        <?php include "../partials/sidebar_admin.php"; ?>
+        <?php include "../../partials/sidebar_admin.php"; ?>
     </div>
 
     <!-- CONTENT -->

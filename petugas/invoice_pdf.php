@@ -14,7 +14,7 @@ $id_pengembalian = (int)$_GET['id'];
 
 /*
 |--------------------------------------------------------------------------
-| AMBIL DATA INVOICE (Prepared Statement)
+| AMBIL DATA INVOICE
 |--------------------------------------------------------------------------
 */
 $stmt = $conn->prepare("
@@ -26,6 +26,8 @@ $stmt = $conn->prepare("
         peng.tanggal_kembali,
         peng.status AS status_pengembalian,
         peng.nomor_invoice,
+        peng.total_denda,
+        peng.status_pembayaran,
         peng.created_at
     FROM pengembalian peng
     JOIN peminjaman p ON peng.id_peminjaman = p.id_peminjaman
@@ -45,7 +47,7 @@ $data = $result->fetch_assoc();
 
 /*
 |--------------------------------------------------------------------------
-| CEK STATUS
+| VALIDASI STATUS
 |--------------------------------------------------------------------------
 */
 if ($data['status_pengembalian'] !== 'disetujui') {
@@ -70,7 +72,7 @@ logAktivitas(
 |--------------------------------------------------------------------------
 */
 $kendaraan_stmt = $conn->prepare("
-    SELECT k.nama_kendaraan
+    SELECT k.nama_kendaraan, d.jumlah
     FROM detail_peminjaman d
     JOIN kendaraan k ON d.id_kendaraan = k.id_kendaraan
     WHERE d.id_peminjaman = ?
@@ -82,14 +84,16 @@ $kendaraan_result = $kendaraan_stmt->get_result();
 
 $kendaraan_list = [];
 while ($k = $kendaraan_result->fetch_assoc()) {
-    $kendaraan_list[] = $k['nama_kendaraan'];
+    $kendaraan_list[] = $k['nama_kendaraan'] . " ({$k['jumlah']})";
 }
 
 /*
 |--------------------------------------------------------------------------
-| AMBIL DENDA
+| OPTIONAL: DETAIL DENDA (kalau tabel denda dipakai)
 |--------------------------------------------------------------------------
 */
+$denda_list = [];
+
 $denda_stmt = $conn->prepare("
     SELECT jenis_denda, jumlah, keterangan, status
     FROM denda
@@ -100,26 +104,16 @@ $denda_stmt->bind_param("i", $data['id_pengembalian']);
 $denda_stmt->execute();
 $denda_result = $denda_stmt->get_result();
 
-$total_denda = 0;
-$denda_list = [];
-
 while ($d = $denda_result->fetch_assoc()) {
-    $total_denda += $d['jumlah'];
     $denda_list[] = $d;
 }
 
 /*
 |--------------------------------------------------------------------------
-| CEK LUNAS
+| STATUS PEMBAYARAN
 |--------------------------------------------------------------------------
 */
-$semua_lunas = true;
-foreach ($denda_list as $d) {
-    if ($d['status'] !== 'dibayar') {
-        $semua_lunas = false;
-        break;
-    }
-}
+$semua_lunas = ($data['status_pembayaran'] === 'lunas');
 
 $tanggal_cetak = date("d-m-Y H:i");
 ?>
@@ -171,12 +165,12 @@ Status:
 
 <p><strong>Nama:</strong> <?= htmlspecialchars($data['nama_peminjam']) ?></p>
 
-<p><strong>Kendaraan:</strong>
+<p><strong>Kendaraan:</strong><br>
 <?= htmlspecialchars(implode(', ', $kendaraan_list)) ?>
 </p>
 
-<p><strong>Tanggal Pinjam:</strong> <?= $data['tanggal_pinjam'] ?></p>
-<p><strong>Tanggal Kembali:</strong> <?= $data['tanggal_kembali'] ?></p>
+<p><strong>Tanggal Pinjam:</strong> <?= date('d M Y', strtotime($data['tanggal_pinjam'])) ?></p>
+<p><strong>Tanggal Kembali:</strong> <?= date('d M Y', strtotime($data['tanggal_kembali'])) ?></p>
 
 <table>
 <thead>
@@ -201,14 +195,14 @@ Status:
     : '<span style="color:red;">BELUM</span>' ?>
 </td>
 <td class="text-right">
-Rp <?= number_format($d['jumlah']) ?>
+Rp <?= number_format($d['jumlah'], 0, ',', '.') ?>
 </td>
 </tr>
 <?php endforeach; ?>
 
 <?php else: ?>
 <tr>
-<td colspan="4" style="text-align:center;">Tidak ada denda</td>
+<td colspan="4" style="text-align:center;">Tidak ada rincian denda</td>
 </tr>
 <?php endif; ?>
 
@@ -219,7 +213,7 @@ Rp <?= number_format($d['jumlah']) ?>
 <tr>
 <td class="total">Total</td>
 <td class="text-right total">
-Rp <?= number_format($total_denda) ?>
+Rp <?= number_format($data['total_denda'], 0, ',', '.') ?>
 </td>
 </tr>
 </table>

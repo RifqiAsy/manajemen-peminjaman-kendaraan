@@ -1,5 +1,6 @@
 <?php
 $current_page = basename($_SERVER['PHP_SELF']);
+$base_url = "/manajemen-peminjaman-kendaraan/admin/";
 ?>
 
 <div class="d-flex flex-column flex-shrink-0 p-3 bg-dark text-white" style="width: 250px; min-height: 100vh;">
@@ -31,37 +32,37 @@ $current_page = basename($_SERVER['PHP_SELF']);
         <small class="text-secondary px-2">Manajemen</small>
 
         <li>
-            <a href="users.php" class="nav-link <?= $current_page=='users.php' ? 'active bg-primary text-white' : 'text-white' ?>">
+            <a href="<?= $base_url ?>users/index.php" class="nav-link <?= $current_page=='users.php' ? 'active bg-primary text-white' : 'text-white' ?>">
                 <i class="bi bi-people-fill me-2"></i> User
             </a>
         </li>
 
         <li>
-            <a href="kendaraan.php" class="nav-link <?= $current_page=='kendaraan.php' ? 'active bg-primary text-white' : 'text-white' ?>">
+            <a href="<?= $base_url ?>kendaraan/index.php" class="nav-link <?= $current_page=='kendaraan/index.php' ? 'active bg-primary text-white' : 'text-white' ?>">
                 <i class="bi bi-car-front-fill me-2"></i> Kendaraan
             </a>
         </li>
 
         <li>
-            <a href="kategori.php" class="nav-link <?= $current_page=='kategori.php' ? 'active bg-primary text-white' : 'text-white' ?>">
+            <a href="<?= $base_url ?>kategori.php" class="nav-link <?= $current_page=='kategori.php' ? 'active bg-primary text-white' : 'text-white' ?>">
                 <i class="bi bi-tags-fill me-2"></i> Kategori
             </a>
         </li>
 
         <li>
-            <a href="peminjaman.php" class="nav-link <?= $current_page=='peminjaman.php' ? 'active bg-primary text-white' : 'text-white' ?>">
+            <a href="<?= $base_url ?>peminjaman/index.php" class="nav-link <?= $current_page=='peminjaman/index.php' ? 'active bg-primary text-white' : 'text-white' ?>">
                 <i class="bi bi-journal-text me-2"></i> Data Peminjaman
             </a>
         </li>
 
         <li>
-            <a href="pengembalian.php" class="nav-link <?= $current_page=='pengembalian.php' ? 'active bg-primary text-white' : 'text-white' ?>">
+            <a href="<?= $base_url ?>pengembalian/index.php" class="nav-link <?= $current_page=='pengembalian/index.php' ? 'active bg-primary text-white' : 'text-white' ?>">
                 <i class="bi bi-arrow-repeat me-2"></i> Pengembalian
             </a>
         </li>
 
         <li>
-            <a href="log.php" class="nav-link <?= $current_page=='log.php' ? 'active bg-primary text-white' : 'text-white' ?>">
+            <a href="<?= $base_url ?>log.php" class="nav-link <?= $current_page=='log.php' ? 'active bg-primary text-white' : 'text-white' ?>">
                 <i class="bi bi-clock-history me-2"></i> Log Aktivitas
             </a>
         </li>

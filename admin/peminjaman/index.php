@@ -1,5 +1,5 @@
 <?php
-include '../config/database.php';
+include '../../config/database.php';
 ?>
 
 <!DOCTYPE html>
@@ -15,14 +15,14 @@ include '../config/database.php';
 <div class="d-flex">
 
     <!-- SIDEBAR -->
-    <?php include '../partials/sidebar_admin.php'; ?>
+    <?php include '../../partials/sidebar_admin.php'; ?>
 
     <!-- CONTENT -->
     <div class="container-fluid p-4">
 
         <h3 class="mb-4">Data Peminjaman</h3>
 
-        <a href="tambah_peminjaman.php" class="btn btn-primary mb-3">+ Tambah</a>
+        <a href="../peminjaman/tambah.php" class="btn btn-primary mb-3">+ Tambah</a>
 
         <div class="card">
             <div class="card-body">
@@ -44,10 +44,15 @@ include '../config/database.php';
                     $no = 1;
 
                     $query = mysqli_query($conn, "
-                        SELECT p.*, u.nama, k.nama_kendaraan
+                        SELECT 
+                            p.*,
+                            u.nama,
+                            GROUP_CONCAT(k.nama_kendaraan SEPARATOR ', ') AS kendaraan
                         FROM peminjaman p
                         JOIN users u ON p.id_user = u.id_user
-                        JOIN kendaraan k ON p.id_kendaraan = k.id_kendaraan
+                        JOIN detail_peminjaman d ON p.id_peminjaman = d.id_peminjaman
+                        JOIN kendaraan k ON d.id_kendaraan = k.id_kendaraan
+                        GROUP BY p.id_peminjaman
                         ORDER BY p.id_peminjaman DESC
                     ");
 
@@ -59,9 +64,9 @@ include '../config/database.php';
                                 echo "<tr>
                                     <td>$no</td>
                                     <td>{$d['nama']}</td>
-                                    <td>{$d['nama_kendaraan']}</td>
+                                    <td>{$d['kendaraan']}</td>
                                     <td>{$d['tanggal_pinjam']}</td>
-                                    <td>{$d['tanggal_rencana_kembali']}</td>
+                                    <td>{$d['tanggal_kembali']}</td>
                                     <td>
                                         <span class='badge bg-info text-dark'>
                                             {$d['status']}

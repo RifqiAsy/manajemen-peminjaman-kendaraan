@@ -1,9 +1,9 @@
 <?php
-include "../middleware/auth.php";
+include "../../middleware/auth.php";
 cekLogin();
 cekRole('admin');
-include "../config/database.php";
-require '../helpers/logger.php';
+include "../../config/database.php";
+require "../../helpers/logger.php";
 
 /* ===============================
    TAMBAH KENDARAAN
@@ -25,7 +25,7 @@ if (isset($_POST['tambah'])) {
     "Menambah kendaraan $nama"
 );
 
-    header("Location: kendaraan.php");
+    header("Location:../kendaraan/index.php");
     exit;
 }
 
@@ -53,7 +53,7 @@ if (isset($_POST['update'])) {
     "Mengupdate kendaraan $nama"
 );
 
-    header("Location: kendaraan.php");
+    header("Location:../kendaraan/index.php");
     exit;
 }
 
@@ -86,7 +86,7 @@ if (isset($_GET['hapus'])) {
     "Menghapus kendaraan ID $id"
 );
 
-    header("Location: kendaraan.php");
+    header("Location:../kendaraan/index.php");
     exit;
 }
 
@@ -102,13 +102,13 @@ $data = mysqli_query($conn, "
 ");
 ?>
 
-<?php include "../partials/header.php"; ?>
+<?php include "../../partials/header.php"; ?>
 
 <div class="container-fluid">
 <div class="row">
 
 <div class="col-auto p-0">
-<?php include "../partials/sidebar_admin.php"; ?>
+<?php include "../../partials/sidebar_admin.php"; ?>
 </div>
 
 <div class="col p-4">

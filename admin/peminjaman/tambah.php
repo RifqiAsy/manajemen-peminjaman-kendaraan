@@ -1,5 +1,5 @@
 <?php
-include '../config/database.php';
+include '../../config/database.php';
 ?>
 
 <!DOCTYPE html>
@@ -13,7 +13,7 @@ include '../config/database.php';
 <div class="container mt-4">
     <h3>Tambah Peminjaman</h3>
 
-    <form action="proses_tambah_peminjaman.php" method="POST">
+    <form action="../../controllers/PeminjamanController.php" method="POST">
 
         <div class="mb-3">
             <label>User</label>
@@ -52,7 +52,7 @@ include '../config/database.php';
         </div>
 
         <button class="btn btn-success">Simpan</button>
-        <a href="peminjaman.php" class="btn btn-secondary">Kembali</a>
+        <a href="../peminjaman/index.php" class="btn btn-secondary">Kembali</a>
 
     </form>
 </div>

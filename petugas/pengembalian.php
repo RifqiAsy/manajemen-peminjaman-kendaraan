@@ -51,14 +51,16 @@ function generateInvoiceNumber($conn)
 if (isset($_POST['verifikasi'])) {
 
     $id = (int) $_POST['id_peminjaman'];
-    $denda = isset($_POST['denda_manual']) ? (int) $_POST['denda_manual'] : 0;
-    $ket = $_POST['keterangan'] ?? '';
+    $denda_manual = isset($_POST['denda_manual']) ? (int) $_POST['denda_manual'] : 0;
+    $ket = mysqli_real_escape_string($conn, $_POST['keterangan'] ?? '');
 
     mysqli_begin_transaction($conn);
 
     try {
 
-        // VALIDASI DATA + LOCK
+        /*
+        | VALIDASI + LOCK DATA
+        */
         $q = mysqli_query($conn, "
             SELECT *
             FROM peminjaman
@@ -68,23 +70,49 @@ if (isset($_POST['verifikasi'])) {
         ");
 
         if (mysqli_num_rows($q) !== 1) {
-            throw new Exception("Data tidak valid.");
+            throw new Exception("Data tidak valid atau sudah diproses.");
         }
 
         $p = mysqli_fetch_assoc($q);
 
+        /*
+        | HITUNG DENDA TERLAMBAT OTOMATIS
+        */
+        $today = new DateTime();
+
+        $batas = !empty($p['tanggal_jatuh_tempo'])
+            ? new DateTime($p['tanggal_jatuh_tempo'])
+            : (new DateTime($p['tanggal_pinjam']))->modify('+3 days');
+
+        $terlambat = ($today > $batas)
+            ? $batas->diff($today)->days
+            : 0;
+
+        $denda_terlambat = $terlambat * $DENDA_PER_HARI;
+
+        /*
+        | TOTAL DENDA
+        */
+        $total_denda = $denda_terlambat + $denda_manual;
+
+        $status_bayar = $total_denda > 0 ? 'belum_dibayar' : 'lunas';
+
         $nomor_invoice = generateInvoiceNumber($conn);
 
-        // INSERT PENGEMBALIAN
+        /*
+        | INSERT PENGEMBALIAN
+        */
         mysqli_query($conn, "
             INSERT INTO pengembalian
-            (nomor_invoice, id_peminjaman, tanggal_kembali, kondisi_kendaraan, catatan, status, diperiksa_oleh, created_at)
+            (nomor_invoice, id_peminjaman, tanggal_kembali, kondisi_kendaraan, catatan, total_denda, status_pembayaran, status, diperiksa_oleh, created_at)
             VALUES (
                 '$nomor_invoice',
                 $id,
                 CURDATE(),
                 'baik',
                 '$ket',
+                $total_denda,
+                '$status_bayar',
                 'disetujui',
                 $id_petugas,
                 NOW()
@@ -93,7 +121,9 @@ if (isset($_POST['verifikasi'])) {
 
         $id_pengembalian = mysqli_insert_id($conn);
 
-        // UPDATE STOK KENDARAAN
+        /*
+        | KEMBALIKAN STOK
+        */
         $detail = mysqli_query($conn, "
             SELECT *
             FROM detail_peminjaman
@@ -109,25 +139,19 @@ if (isset($_POST['verifikasi'])) {
             ");
         }
 
-        // UPDATE PEMINJAMAN
+        /*
+        | UPDATE STATUS PEMINJAMAN
+        */
         mysqli_query($conn, "
             UPDATE peminjaman
-            SET 
-                status = 'dikembalikan'
+            SET status = 'dikembalikan'
             WHERE id_peminjaman = $id
         ");
 
-        // UPDATE TOTAL DENDA DI PENGEMBALIAN
-        $status = $denda > 0 ? 'belum_dibayar' : 'lunas';
-
-        mysqli_query($conn, "
-            UPDATE pengembalian
-            SET total_denda = $denda,
-                status_pembayaran = '$status'
-            WHERE id_pengembalian = $id_pengembalian
-        ");
-
-        logAktivitas($conn, $id_petugas, "Verifikasi pengembalian ID $id");
+        /*
+        | LOG
+        */
+        logAktivitas($conn, $id_petugas, "Verifikasi pengembalian ID $id (denda: $total_denda)");
 
         mysqli_commit($conn);
 
@@ -184,68 +208,70 @@ $data = mysqli_query($conn, "
                 <div class="card-body p-0">
 
                     <table class="table table-hover align-middle mb-0">
-                        <tr style="background:#1e293b; color:white;" class="text-center">
-                            <th>Peminjam</th>
-                            <th>Kendaraan</th>
-                            <th>Tgl Pinjam</th>
-                            <th>Jatuh Tempo</th>
-                            <th style="width:120px;">Terlambat</th>
-                            <th style="width:150px;">Denda Telat</th>
-                            <th style="width:300px;">Denda Kerusakan</th>
-                        </tr>
-
-                        <?php while ($r = mysqli_fetch_assoc($data)):
-
-                            $today = new DateTime();
-
-                            $batas = !empty($r['tanggal_jatuh_tempo'])
-                                ? new DateTime($r['tanggal_jatuh_tempo'])
-                                : (new DateTime($r['tanggal_pinjam']))->modify('+3 days');
-
-                            $terlambat = ($today > $batas)
-                                ? $batas->diff($today)->days
-                                : 0;
-
-                            $estimasi = $terlambat * $DENDA_PER_HARI;
-                        ?>
-
-                            <tr>
-                                <td><?= htmlspecialchars($r['nama']) ?></td>
-                                <td><?= htmlspecialchars($r['kendaraan']) ?></td>
-                                <td><?= date('d M Y', strtotime($r['tanggal_pinjam'])) ?></td>
-                                <td><?= $batas->format('d M Y') ?></td>
-                                <td class="text-center <?= $terlambat > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' ?>">
-                                    <?= $terlambat ?> hari
-                                </td>
-                                <td class="text-danger fw-bold">Rp <?= number_format($estimasi, 0, ',', '.') ?></td>
-                                <td>
-                                    <form method="post" class="bg-white border-0 rounded-3 p-3 shadow-sm">
-
-                                        <input type="hidden" name="id_peminjaman" value="<?= $r['id_peminjaman'] ?>">
-
-                                        <div class="mb-2">
-                                            <input type="number" name="denda_manual"
-                                                class="form-control form-control-sm"
-                                                placeholder="Masukkan denda (Rp)">
-                                        </div>
-
-                                        <div class="mb-2">
-                                            <input type="text" name="keterangan"
-                                                class="form-control form-control-sm"
-                                                placeholder="Keterangan (opsional)">
-                                        </div>
-
-                                        <button type="submit" name="verifikasi"
-                                            class="btn btn-success btn-sm w-100">
-                                            Verifikasi
-                                        </button>
-
-                                    </form>
-                                </td>
+                        <thead>
+                            <tr style="background:#1e293b; color:white;" class="text-center">
+                                <th>Peminjam</th>
+                                <th>Kendaraan</th>
+                                <th>Tgl Pinjam</th>
+                                <th>Jatuh Tempo</th>
+                                <th>Terlambat</th>
+                                <th>Denda</th>
+                                <th>Aksi</th>
                             </tr>
+                        </thead>
+                        <tbody>
 
-                        <?php endwhile; ?>
+                            <?php while ($r = mysqli_fetch_assoc($data)):
 
+                                $today = new DateTime();
+
+                                $batas = !empty($r['tanggal_jatuh_tempo'])
+                                    ? new DateTime($r['tanggal_jatuh_tempo'])
+                                    : (new DateTime($r['tanggal_pinjam']))->modify('+3 days');
+
+                                $terlambat = ($today > $batas)
+                                    ? $batas->diff($today)->days
+                                    : 0;
+
+                                $estimasi = $terlambat * $DENDA_PER_HARI;
+                            ?>
+
+                                <tr>
+                                    <td><?= htmlspecialchars($r['nama']) ?></td>
+                                    <td><?= htmlspecialchars($r['kendaraan']) ?></td>
+                                    <td><?= date('d M Y', strtotime($r['tanggal_pinjam'])) ?></td>
+                                    <td><?= $batas->format('d M Y') ?></td>
+                                    <td class="text-center <?= $terlambat > 0 ? 'text-danger fw-bold' : 'text-success fw-bold' ?>">
+                                        <?= $terlambat ?> hari
+                                    </td>
+                                    <td class="text-danger fw-bold">
+                                        Rp <?= number_format($estimasi, 0, ',', '.') ?>
+                                    </td>
+                                    <td>
+                                        <form method="post">
+
+                                            <input type="hidden" name="id_peminjaman" value="<?= $r['id_peminjaman'] ?>">
+
+                                            <input type="number" name="denda_manual"
+                                                class="form-control form-control-sm mb-2"
+                                                placeholder="Denda tambahan">
+
+                                            <input type="text" name="keterangan"
+                                                class="form-control form-control-sm mb-2"
+                                                placeholder="Keterangan">
+
+                                            <button type="submit" name="verifikasi"
+                                                class="btn btn-success btn-sm w-100">
+                                                Verifikasi
+                                            </button>
+
+                                        </form>
+                                    </td>
+                                </tr>
+
+                            <?php endwhile; ?>
+
+                        </tbody>
                     </table>
 
                 </div>

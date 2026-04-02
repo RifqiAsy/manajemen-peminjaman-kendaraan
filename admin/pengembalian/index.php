@@ -1,5 +1,5 @@
 <?php
-include '../config/database.php';
+include '../../config/database.php';
 ?>
 
 <!DOCTYPE html>
@@ -12,7 +12,7 @@ include '../config/database.php';
 
 <div class="d-flex">
 
-    <?php include '../partials/sidebar_admin.php'; ?>
+    <?php include '../../partials/sidebar_admin.php'; ?>
 
     <div class="container-fluid p-4">
 

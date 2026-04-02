@@ -2,7 +2,9 @@
 include '../middleware/auth.php';
 cekLogin();
 cekRole('peminjam');
+
 include '../config/database.php';
+require '../helpers/logger.php';
 
 $id_user = (int) $_SESSION['id_user'];
 
@@ -10,34 +12,59 @@ $id_user = (int) $_SESSION['id_user'];
 // AJUKAN PENGEMBALIAN
 // =============================
 if (isset($_GET['kembali'])) {
+
     $id = (int) $_GET['kembali'];
 
     mysqli_begin_transaction($conn);
 
     try {
 
-        // 1. simpan ke tabel pengembalian
+        // 🔍 Cek apakah peminjaman valid
+        $cek = mysqli_query($conn, "
+            SELECT * FROM peminjaman 
+            WHERE id_peminjaman = $id
+            AND id_user = $id_user
+            AND status = 'disetujui'
+        ");
+
+        if (mysqli_num_rows($cek) == 0) {
+            throw new Exception("Data tidak valid atau sudah diproses.");
+        }
+
+        // 🔍 Cek apakah sudah pernah diajukan pengembalian
+        $cekPengembalian = mysqli_query($conn, "
+            SELECT * FROM pengembalian 
+            WHERE id_peminjaman = $id
+        ");
+
+        if (mysqli_num_rows($cekPengembalian) > 0) {
+            throw new Exception("Pengembalian sudah diajukan sebelumnya.");
+        }
+
+        // 1. Simpan ke tabel pengembalian
         mysqli_query($conn, "
             INSERT INTO pengembalian (id_peminjaman, tanggal_kembali)
             VALUES ($id, CURDATE())
         ");
 
-        // 2. update status di peminjaman
+        // 2. Update status peminjaman
         mysqli_query($conn, "
             UPDATE peminjaman 
             SET status = 'menunggu_kembali'
             WHERE id_peminjaman = $id
-            AND id_user = $id_user
-            AND status = 'disetujui'
         ");
+
+        // LOG
+        logAktivitas($conn, $id_user, "Mengajukan pengembalian ID $id");
 
         mysqli_commit($conn);
 
         $_SESSION['success'] = "Pengembalian berhasil diajukan.";
 
     } catch (Exception $e) {
+
         mysqli_rollback($conn);
-        $_SESSION['error'] = "Gagal mengajukan pengembalian!";
+        $_SESSION['error'] = $e->getMessage();
     }
 
     header("Location: pengembalian.php");
@@ -50,7 +77,7 @@ if (isset($_GET['kembali'])) {
 $data = mysqli_query($conn, "
     SELECT 
         p.id_peminjaman,
-        MAX(p.tanggal_pinjam) AS tanggal_pinjam,
+        p.tanggal_pinjam,
         GROUP_CONCAT(k.nama_kendaraan SEPARATOR ', ') AS daftar_kendaraan
     FROM peminjaman p
     JOIN detail_peminjaman d ON p.id_peminjaman = d.id_peminjaman
