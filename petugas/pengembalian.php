@@ -119,6 +119,22 @@ if (isset($_POST['verifikasi'])) {
             )
         ");
 
+                // DENDA TERLAMBAT
+        if ($denda_terlambat > 0) {
+            mysqli_query($conn, "
+                INSERT INTO denda (id_pengembalian, jenis_denda, jumlah)
+                VALUES ($id_pengembalian, 'terlambat', $denda_terlambat)
+            ");
+        }
+
+        // DENDA MANUAL (KERUSAKAN)
+        if ($denda_manual > 0) {
+            mysqli_query($conn, "
+                INSERT INTO denda (id_pengembalian, jenis_denda, jumlah)
+                VALUES ($id_pengembalian, 'kerusakan', $denda_manual)
+            ");
+        }
+
         $id_pengembalian = mysqli_insert_id($conn);
 
         /*

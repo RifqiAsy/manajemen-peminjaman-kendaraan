@@ -12,7 +12,7 @@ $id_user = $_SESSION['id_user'];
 $data = mysqli_query($conn, "
     SELECT 
         p.id_peminjaman,
-        k.nama_kendaraan,
+        GROUP_CONCAT(k.nama_kendaraan SEPARATOR ', ') AS kendaraan
         p.tanggal_pinjam,
         p.tanggal_jatuh_tempo,
         pg.tanggal_kembali,
